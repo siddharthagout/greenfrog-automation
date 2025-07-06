@@ -1,5 +1,6 @@
 import logging
 
+
 class RepositoryApiHelpers:
     def __init__(self, api_client):
         self.client = api_client

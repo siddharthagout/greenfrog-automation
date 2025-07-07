@@ -131,9 +131,14 @@ This repository implements an automation framework for end-to-end testing and AP
    # For Mac/Linux
    python3 -m venv venv
    source venv/bin/activate
+
+   # incase you want to run tests without any IDE
+   MYDIR=`pwd`/venv/bin/activate
+   source $MYDIR
    # For Windows
    # .\venv\Scripts\activate
    ```
+   Note incase 
 
 5. Install dependencies:
 

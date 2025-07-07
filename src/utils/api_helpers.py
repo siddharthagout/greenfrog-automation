@@ -1,25 +1,27 @@
 import logging
 
+from factories.data.payload_factory import ApiPayloadFactory
+from config.constants import JFrogEndpoints
 
-class RepositoryApiHelpers:
+
+class JfrogApiHelpers:
     def __init__(self, api_client):
         self.client = api_client
 
     def create_repository(self, repo_name):
-        endpoint = f"/artifactory/api/repositories/{repo_name}"
-        payload = {
-            "key": repo_name,
-            "projectKey": "",
-            "packageType": "docker",
-            "rclass": "local",
-            "xrayIndex": True,
-        }
-
-        logging.info("Sending PUT request to %s with payload: %s", endpoint, payload)
+        """helper method for creating the repository with given repo_name"""
+        payload = ApiPayloadFactory.create_repository_payload(repo_name)
+        logging.info(
+            "Sending PUT request to %s with payload: %s",
+            JFrogEndpoints.REPO_ENDPOINT,
+            payload,
+        )
 
         try:
             logging.info("creating repository : %s", repo_name)
-            response = self.client.put(endpoint, data=payload)
+            response = self.client.put(
+                JFrogEndpoints.REPO_ENDPOINT + "/" + repo_name, data=payload
+            )
             logging.info(
                 "Response status for create repository: %s", response.status_code
             )
@@ -33,11 +35,11 @@ class RepositoryApiHelpers:
             raise
 
     def get_repositories(self):
-        endpoint = "/artifactory/api/repositories"
-        logging.info("Sending GET request to %s", endpoint)
+        """helper method to fetch all repository created in system"""
+        logging.info("Sending GET request to %s", JFrogEndpoints.REPO_ENDPOINT)
 
         try:
-            response = self.client.get(endpoint)
+            response = self.client.get(JFrogEndpoints.REPO_ENDPOINT)
             logging.info(
                 "Response status for get repositories: %s", response.status_code
             )
@@ -51,31 +53,13 @@ class RepositoryApiHelpers:
             raise
 
     def create_policy(self, policy_name):
-        endpoint = "/xray/api/v2/policies"
-        payload = {
-            "name": policy_name,
-            "description": "Auto-created security policy",
-            "type": "Security",
-            "rules": [
-                {
-                    "name": "rule-1",
-                    "criteria": {
-                        "min_severity": "High",
-                        "malicious_package": False,
-                        "fix_version_dependant": False,
-                    },
-                    "actions": {
-                        "block_download": {"active": False},
-                        "fail_build": False,
-                    },
-                    "priority": 1,
-                }
-            ],
-        }
-
+        """helper method to create the policy with given policy name"""
         try:
             logging.info("creating policy : %s", policy_name)
-            response = self.client.post(endpoint, data=payload)
+            response = self.client.post(
+                JFrogEndpoints.POLICY_ENDPOINT,
+                data=ApiPayloadFactory.create_policy_payload(policy_name),
+            )
             logging.info("Response status for create policy: %s", response.status_code)
             logging.info(
                 "Response body for create policy: %s",
@@ -87,31 +71,17 @@ class RepositoryApiHelpers:
             raise
 
     def create_watch(self, policy_name, watch_name, repo_name):
-        endpoint = "/xray/api/v2/watches"
-        payload = {
-            "general_data": {
-                "name": watch_name,
-                "description": "This is an example watch #1",
-                "active": True,
-            },
-            "project_resources": {
-                "resources": [
-                    {
-                        "type": "repository",
-                        "bin_mgr_id": "default",
-                        "name": repo_name,
-                        "filters": [{"type": "regex", "value": ".*"}],
-                    }
-                ]
-            },
-            "assigned_policies": [{"name": policy_name, "type": "security"}],
-        }
-
+        """helper method to create watch with given policy_name, watch_name, repo_name"""
         try:
             logging.info(
                 "creating watch as - %s for %s repository", watch_name, repo_name
             )
-            response = self.client.post(endpoint, data=payload)
+            response = self.client.post(
+                JFrogEndpoints.WATCH_ENDPOINT,
+                data=ApiPayloadFactory.create_watch_payload(
+                    policy_name, watch_name, repo_name
+                ),
+            )
             logging.info("Response status for create watch: %s", response.status_code)
             logging.info(
                 "Response body for create watch: %s",
@@ -123,15 +93,7 @@ class RepositoryApiHelpers:
             raise
 
     def apply_watch(self, watch_name, watch_start_date, watch_end_date):
-        endpoint = "/xray/api/v1/applyWatch"
-        payload = {
-            "watch_names": [watch_name],
-            "date_range": {
-                "start_date": watch_start_date,
-                "end_date": watch_end_date,
-            },
-        }
-
+        """helper method to apply given watch for a certain time period"""
         try:
             logging.info(
                 "applying watch - %s for timerange %s to %s",
@@ -139,7 +101,12 @@ class RepositoryApiHelpers:
                 watch_start_date,
                 watch_end_date,
             )
-            response = self.client.post(endpoint, data=payload)
+            response = self.client.post(
+                JFrogEndpoints.APPLY_WATCH_ENDPOINT,
+                data=ApiPayloadFactory.apply_watch_payload(
+                    watch_name, watch_start_date, watch_end_date
+                ),
+            )
             logging.info("Response status for applywatch: %s", response.status_code)
             logging.info(
                 "Response body for applywatch: %s", getattr(response, "text", response)
@@ -150,14 +117,13 @@ class RepositoryApiHelpers:
             raise
 
     def get_scan_status(self, repo_name):
-        endpoint = "/xray/api/v1/artifact/status"
-        payload = {
-            "repo": repo_name,
-            "path": "/alpine/3.9/manifest.json",
-        }
+        """helper method to check the vulnerability scan status for given repo_name"""
         try:
             logging.info("checking scan status for repo : %s", repo_name)
-            response = self.client.post(endpoint, data=payload)
+            response = self.client.post(
+                JFrogEndpoints.SCAN_STATUS_ENDPOINT,
+                data=ApiPayloadFactory.get_scan_status_payload(repo_name),
+            )
             logging.info("Response status for scan status: %s", response.status_code)
             logging.info(
                 "Response body for scan status: %s", getattr(response, "text", response)
@@ -168,23 +134,9 @@ class RepositoryApiHelpers:
             raise
 
     def get_violations(self, repo_name, watch_name, artifact_path):
-        endpoint = "/xray/api/v1/violations"
-        payload = {
-            "filters": {
-                "watch_name": watch_name,
-                "violation_type": "Security",
-                "min_severity": "High",
-                "resources": {
-                    "artifacts": [{"repo": repo_name, "path": artifact_path}]
-                },
-            },
-            "pagination": {
-                "order_by": "created",
-                "direction": "asc",
-                "limit": 100,
-                "offset": 1,
-            },
-        }
+        """helper method to check the violations under a watch for
+        a certain artifact for given repo_name
+        """
         try:
             logging.info(
                 "fetching violations for repo : %s with watch : %s and artifact : %s",
@@ -192,7 +144,12 @@ class RepositoryApiHelpers:
                 watch_name,
                 artifact_path,
             )
-            response = self.client.post(endpoint, data=payload)
+            response = self.client.post(
+                JFrogEndpoints.VIOLATIONS_ENDPOINT,
+                data=ApiPayloadFactory.get_violations_payload(
+                    repo_name, watch_name, artifact_path
+                ),
+            )
             logging.info(
                 "Response status for fetching violations: %s", response.status_code
             )

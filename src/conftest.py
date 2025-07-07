@@ -1,3 +1,4 @@
+"""Global conftest, this is created incase multiple modules are there under tests directory"""
 import logging
 import pytest
 

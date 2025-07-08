@@ -23,6 +23,9 @@ This repository implements an automation framework for end-to-end testing and AP
 
 ## Understanding the Automation Framework Structure
 
+<img width="1726" alt="framework_design" src="https://github.com/user-attachments/assets/1a10eb8d-2332-4805-bfaf-aaa67933d7e7" />
+
+
 1. [`.github`](.github) directory
 
    - This directory has the [pull_request_template.md](.github/pull_request_template.md) and [`workflows`](.github/workflows) configured for this repository
